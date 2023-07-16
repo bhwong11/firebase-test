@@ -48,24 +48,31 @@ const getTask = async (id,db)=>{
   }
 }
 
-const createTask = async (taskObj={},db)=> {
-  try {
-    console.log('task obj',taskObj)
-    const taskCol = collection(db, 'test-tasks');
-    const taskSnapshot = await addDoc(taskCol,{
-      ...taskObj,
-      user:doc(db,'test-users', 'user1')
-    });
-    console.log("Document written with ID: ", taskSnapshot.id,taskSnapshot);
-  } catch (e) {
-    console.error("Error adding document: ", e);
-  }
-}
-
 function App() {
   const [tasks,setTasks] = useState([])
   const [taskNameValues,setTaskNameValues] = useState({})
   const [newTask,setNewTask] = useState({})
+
+  const createTask = async (taskObj={},db)=> {
+    try {
+      const taskCol = collection(db, 'test-tasks');
+      const taskSnapshot = await addDoc(taskCol,{
+        ...taskObj,
+        user:doc(db,'test-users', 'user1')
+      });
+      console.log("Document written with ID: ", taskSnapshot.id,taskSnapshot);
+      getTask(taskSnapshot.id,db).then(r=>{
+        const task = {
+          ...r,
+          id: taskSnapshot.id
+        }
+        const tasksCopy = [...tasks,task]
+        setTasks(tasksCopy)
+      })
+    } catch (e) {
+      console.error("Error adding document: ", e);
+    }
+  }
 
   const updateAndSetTask = async (id,updateObj={},db)=>{
     const taskRef = doc(db,'test-tasks', id)
@@ -146,7 +153,10 @@ function App() {
           //probs move this to a external func
           e.preventDefault()
           await createTask(newTask,db)
-          setNewTask({})
+          setNewTask({
+            name:'',
+            description:''
+          })
         }}>
           update name
         </button>
