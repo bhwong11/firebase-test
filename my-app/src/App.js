@@ -4,7 +4,7 @@ import {useEffect,useState} from 'react'
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore, collection, getDocs,getDoc  } from 'firebase/firestore/lite';
+import { getFirestore, collection, getDocs, getDoc, doc,updateDoc } from 'firebase/firestore/lite';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -34,18 +34,53 @@ const getTasks = async (db)=> {
   }));
 }
 
+const getTask = async (id,db)=>{
+  const taskRef = doc(db,'test-tasks', id)
+  const taskDoc = await getDoc(taskRef);
+  if (!taskDoc.exists) {
+    console.log('No such document!');
+  } else {
+    console.log('Document data:', taskDoc.data());
+  }
+  return {
+    ...taskDoc.data(),
+    id:taskDoc.id
+  }
+}
+
 function App() {
-  const [task,setTasks] = useState([])
+  const [tasks,setTasks] = useState([])
   const [taskNameValues,setTaskNameValues] = useState({})
+
+  const updateTask = async (id,updateObj={},db)=>{
+    const taskRef = doc(db,'test-tasks', id)
+    await updateDoc(taskRef,updateObj);
+    getTask(id,db).then(r=>{
+      const task = {
+        ...r,
+        id:r.id
+      }
+      console.log('task',tasks)
+      const taskIndex = tasks.findIndex(task=>task.id===id)
+      const tasksCopy = [...tasks]
+      tasksCopy[taskIndex] = task
+      console.log('taskcoup',tasksCopy)
+      setTasks(tasksCopy)
+    })
+  }
+
   useEffect(()=>{
     getTasks(db).then(r=>{
       setTasks(r)
+    })
+    getTask('task1',db).then(r=>{
+      console.log('re',r)
     })
   },[])
   return (
     <div className="App">
       <h1>HELLO</h1>
-      {task.map(task=>(
+      {tasks.map(task=>(
         <>
         <div>{task.name}</div>
         <div>{task.id}</div>
@@ -58,9 +93,10 @@ function App() {
             })
           }}
         />
-        <button onSubmit={(e)=>{
+        <button onClick={(e)=>{
           //probs move this to a external func
           e.preventDefault()
+          updateTask(task.id,{name:taskNameValues[task.id]},db)
         }}>
           update name
         </button>
