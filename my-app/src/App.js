@@ -4,7 +4,7 @@ import {useEffect,useState} from 'react'
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore, collection, getDocs, getDoc, doc,updateDoc } from 'firebase/firestore/lite';
+import { getFirestore, collection, getDocs, getDoc, doc,updateDoc, addDoc } from 'firebase/firestore/lite';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -48,11 +48,26 @@ const getTask = async (id,db)=>{
   }
 }
 
+const createTask = async (taskObj={},db)=> {
+  try {
+    console.log('task obj',taskObj)
+    const taskCol = collection(db, 'test-tasks');
+    const taskSnapshot = await addDoc(taskCol,{
+      ...taskObj,
+      user:doc(db,'test-users', 'user1')
+    });
+    console.log("Document written with ID: ", taskSnapshot.id,taskSnapshot);
+  } catch (e) {
+    console.error("Error adding document: ", e);
+  }
+}
+
 function App() {
   const [tasks,setTasks] = useState([])
   const [taskNameValues,setTaskNameValues] = useState({})
+  const [newTask,setNewTask] = useState({})
 
-  const updateTask = async (id,updateObj={},db)=>{
+  const updateAndSetTask = async (id,updateObj={},db)=>{
     const taskRef = doc(db,'test-tasks', id)
     await updateDoc(taskRef,updateObj);
     getTask(id,db).then(r=>{
@@ -60,11 +75,9 @@ function App() {
         ...r,
         id:r.id
       }
-      console.log('task',tasks)
       const taskIndex = tasks.findIndex(task=>task.id===id)
       const tasksCopy = [...tasks]
       tasksCopy[taskIndex] = task
-      console.log('taskcoup',tasksCopy)
       setTasks(tasksCopy)
     })
   }
@@ -96,12 +109,48 @@ function App() {
         <button onClick={(e)=>{
           //probs move this to a external func
           e.preventDefault()
-          updateTask(task.id,{name:taskNameValues[task.id]},db)
+          updateAndSetTask(task.id,{name:taskNameValues[task.id]},db)
         }}>
           update name
         </button>
         </>
       ))}
+
+      <div>
+        {JSON.stringify(newTask)}
+        <div>
+        name
+        <input
+          value={newTask['name']}
+          onChange={(e)=>{
+            setNewTask({
+              ...newTask,
+              name:e.target.value
+            })
+          }}
+        />
+        </div>
+        <div>
+        description
+        <input
+          value={newTask['description']}
+          onChange={(e)=>{
+            setNewTask({
+              ...newTask,
+              description:e.target.value
+            })
+          }}
+        />
+        </div>
+        <button onClick={async (e)=>{
+          //probs move this to a external func
+          e.preventDefault()
+          await createTask(newTask,db)
+          setNewTask({})
+        }}>
+          update name
+        </button>
+      </div>
     </div>
   );
 }
